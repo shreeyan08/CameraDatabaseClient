@@ -161,7 +161,6 @@ class Client(object):
                 raise InternalError()
         return response.json()['clientID'], response.json()['clientSecret']
 
-
     # TODO: update client's owner
     def update_owner(self, clientID, owner):
         """
@@ -395,22 +394,22 @@ class Client(object):
         local_params['type'] = local_params.pop('camera_type')
 
         del local_params['self']
-        if camera_type == 'ip':
+        if kwargs['camera_type'] == 'ip':
             local_params['retrieval'] = {
-                'ip': ip,
-                'port': port,
-                'brand': brand,
-                'model': model,
-                'image_path': image_path,
-                'video_path': video_path
+                'ip': kwargs['ip'],
+                'port': kwargs['port'],
+                'brand': kwargs['brand'],
+                'model': kwargs['model'],
+                'image_path': kwargs['image_path'],
+                'video_path': kwargs['video_path']
             }
-        elif camera_type == 'non-ip':
+        elif kwargs['camera_type'] == 'non-ip':
             local_params['retrieval'] = {
-                'snapshot_url': snapshot_url
+                'snapshot_url': kwargs['snapshot_url']
             }
-        elif camera_type == 'stream':
+        elif kwargs['camera_type'] == 'stream':
             local_params['retrieval'] = {
-                'm3u8_url': m3u8_url
+                'm3u8_url': kwargs['m3u8_url']
             }
 
         # Change the given dict into an object for API
