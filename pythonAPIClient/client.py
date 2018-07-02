@@ -296,11 +296,7 @@ class Client(object):
                 raise InternalError()
         return response.json()['api_usage']
 
-    def add_camera(self, camera_type=None, is_active_image=None, is_active_video=None, ip=None, snapshot_url=None,
-                   m3u8_url=None, legacy_cameraID=None, source=None, latitude=None, longitude=None, country=None,
-                   state=None, city=None, resolution_width=None, resolution_height=None, utc_offset=None,
-                   timezone_id=None, timezone_name=None, reference_logo=None, reference_url=None, port=None, brand=None,
-                   model=None, image_path=None, video_path=None):
+    def add_camera(self, **kwargs):
 
         """add_camera initialization method.
 
@@ -393,6 +389,8 @@ class Client(object):
         url = Client.base_URL + 'cameras/create'
 
         local_params = dict(locals())
+        d1 = local_params.pop('kwargs')
+        local_params = {**d1, **local_params}
 
         local_params['type'] = local_params.pop('camera_type')
 
