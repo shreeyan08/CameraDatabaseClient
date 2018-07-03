@@ -1,10 +1,11 @@
 """
 Represents a CAM2 client application.
 """
-import requests
 import json
+import requests
 from .error import AuthenticationError, InternalError, InvalidClientIdError, \
-    InvalidClientSecretError, ResourceNotFoundError, FormatError, AuthorizationError
+    InvalidClientSecretError, ResourceNotFoundError, FormatError, \
+    AuthorizationError, ResourceConflictError
 from .camera import Camera
 
 
@@ -46,6 +47,11 @@ class Client(object):
     This is the URL of CAM2 Database API. User is able to send API calls directly to this URL.
 
     """
+
+    def _check_args(self, kwargs=None, required_args=None):
+        args_not_found = required_args - kwargs.keys()
+        if args_not_found:
+            raise FormatError('Required keywords such as ' + str(args_not_found) + ' are not found')
 
     def _check_token(self, response, flag, url, data=None, params=None):
         counter = 0
@@ -382,41 +388,20 @@ class Client(object):
                     cameraID: the new camera ID for the created camera
         """
 
+        required_args = ('camera_type', 'is_active_image', 'is_active_video',
+                         'retrieval', 'snapshot_url', 'm3u8_url', 'ip')
+        self._check_args(kwargs=kwargs, required_args=required_args)
+
         if self.token is None:
             self.request_token()
 
         url = Client.base_URL + 'cameras/create'
 
-        local_params = dict(locals())
-        d1 = local_params.pop('kwargs')
-        local_params = {**d1, **local_params}
-
-        local_params['type'] = local_params.pop('camera_type')
-
-        del local_params['self']
-        if kwargs['camera_type'] == 'ip':
-            local_params['retrieval'] = {
-                'ip': kwargs['ip'],
-                'port': kwargs['port'],
-                'brand': kwargs['brand'],
-                'model': kwargs['model'],
-                'image_path': kwargs['image_path'],
-                'video_path': kwargs['video_path']
-            }
-        elif kwargs['camera_type'] == 'non-ip':
-            local_params['retrieval'] = {
-                'snapshot_url': kwargs['snapshot_url']
-            }
-        elif kwargs['camera_type'] == 'stream':
-            local_params['retrieval'] = {
-                'm3u8_url': kwargs['m3u8_url']
-            }
-
         # Change the given dict into an object for API
-        local_params['retrieval'] = json.dumps(local_params['retrieval'], sort_keys=True, indent=4,
-                                               separators=(',', ':'))
+        kwargs['retrieval'] = json.dumps(kwargs['retrieval'], sort_keys=True, indent=4,
+                                         separators=(',', ':'))
 
-        response = requests.post(url, headers=self.header_builder(), data=local_params)
+        response = requests.post(url, headers=self.header_builder(), data=kwargs)
         if response.status_code != 201:
             if response.status_code == 403:
                 raise AuthenticationError(response.json()['message'])
@@ -426,7 +411,7 @@ class Client(object):
                 raise ResourceConflictError(response.json()['message'])
             elif response.status_code == 401:
                 self.request_token()
-                response = requests.post(url, headers=self.header_builder(), data=local_params)
+                response = requests.post(url, headers=self.header_builder(), data=kwargs)
             elif response.status_code == 500:
                 print(response.status_code)
                 raise InternalError()
@@ -435,11 +420,7 @@ class Client(object):
 
         return response.json()['cameraID']
 
-    def update_camera(self, camera_type=None, is_active_image=None, is_active_video=None, snapshot_url=None,
-                      m3u8_url=None, ip=None, legacy_cameraID=None, source=None, lat=None, lng=None, country=None,
-                      state=None, city=None, resolution_width=None, resolution_height=None, utc_offset=None,
-                      timezone_id=None, timezone_name=None, reference_logo=None, reference_url=None, port=None,
-                      brand=None, model=None, image_path=None, video_path=None):
+    def update_camera(self, **kwargs):
         """add_camera initialization method.
 
                         Parameters
@@ -509,7 +490,8 @@ class Client(object):
                         Raises
                         ------
                             AuthenticationError
-                                If the client secret of this client object does not match the clientID.
+                                If the client secret of this client object does not
+                                match the clientID.
                             FormatError
                                 List of invalid attributes.
                             ResourceConflictError
@@ -534,22 +516,22 @@ class Client(object):
         local_params['type'] = local_params.pop('camera_type')
 
         del local_params['self']
-        if camera_type == 'ip':
+        if kwargs['camera_type'] == 'ip':
             local_params['retrieval'] = {
-                'ip': ip,
-                'port': port,
-                'brand': brand,
-                'model': model,
-                'image_path': image_path,
-                'video_path': video_path
+                'ip': kwargs['ip'],
+                'port': kwargs['port'],
+                'brand': kwargs['brand'],
+                'model': kwargs['model'],
+                'image_path': kwargs['image_path'],
+                'video_path': kwargs['video_path']
             }
-        elif camera_type == 'non-ip':
+        elif kwargs['camera_type'] == 'non-ip':
             local_params['retrieval'] = {
-                'snapshot_url': snapshot_url
+                'snapshot_url': kwargs['snapshot_url']
             }
-        elif camera_type == 'stream':
+        elif kwargs['camera_type'] == 'stream':
             local_params['retrieval'] = {
-                'm3u8_url': m3u8_url
+                'm3u8_url': kwargs['m3u8_url']
             }
 
         # Change the given dict into an object for API
